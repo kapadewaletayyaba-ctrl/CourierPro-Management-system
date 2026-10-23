@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CourierPro - Courier Management System</title>
+
+    <!-- 1. Place warning suppression FIRST so it intercepts logs immediately -->
+    <script>
+        const origWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
+                return;
+            }
+            origWarn.apply(console, args);
+        };
+    </script>
+
+    <!-- 2. Load Tailwind CDN ONCE -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 3. FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 4. Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Custom Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        rosebrand: {
+                            DEFAULT: '#E11D48',
+                            dark: '#BE123C',
+                            light: '#FB7185',
+                            50: '#FFF1F2',
+                            100: '#FFE4E6',
+                            200: '#FECDD3',
+                            500: '#F43F5E',
+                            600: '#E11D48',
+                            700: '#BE123C'
+                        },
+                        pinkbg: '#FCE4EC'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225, 29, 72, 0.2); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(225, 29, 72, 0.4); }
+    </style>
+</head>
+<body class="bg-pinkbg/30 dark:bg-gray-900 text-gray-800 dark:text-gray-100 h-full flex flex-col transition-colors duration-200">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 bg-white dark:bg-gray-800 border-r border-rosebrand-100 dark:border-gray-700 flex flex-col justify-between transition-all duration-300 z-30 absolute md:relative -translate-x-full md:translate-x-0 h-full">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-rosebrand text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-rosebrand/30">
+                            📬
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-xl text-rosebrand dark:text-rosebrand-light leading-tight">CourierPro</h1>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Management System</p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar-btn" class="md:hidden text-gray-500 hover:text-rosebrand">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1 custom-scrollbar overflow-y-auto max-h-[calc(100vh-140px)]">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-chart-pie text-lg w-5"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('bookings')" id="nav-bookings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-boxes-packing text-lg w-5"></i> Bookings
+                    </button>
+                    <button onclick="switchTab('track')" id="nav-track" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-location-dot text-lg w-5"></i> Track Shipment
+                    </button>
+                    <button onclick="switchTab('personnel')" id="nav-personnel" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-truck-fast text-lg w-5"></i> Personnel
+                    </button>
+                    <button onclick="switchTab('routes')" id="nav-routes" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-route text-lg w-5"></i> Routes
+                    </button>
+                    <button onclick="switchTab('billing')" id="nav-billing" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-file-invoice-dollar text-lg w-5"></i> Billing & Invoices
+                    </button>
+                    <button onclick="switchTab('customers')" id="nav-customers" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-users text-lg w-5"></i> Customers
+                    </button>
+                    <button onclick="switchTab('reviews')" id="nav-reviews" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-star text-lg w-5"></i> Reviews & Ratings
+                    </button>
+                    <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-rosebrand-50 dark:hover:bg-gray-700 hover:text-rosebrand transition-all">
+                        <i class="fa-solid fa-file-lines text-lg w-5"></i> Reports Analytics
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar User / Footer -->
+            <div class="p-4 border-t border-rosebrand-100 dark:border-gray-700">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-pinkbg/50 dark:bg-gray-700/50">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-9 h-9 rounded-full bg-rosebrand text-white flex items-center justify-center font-bold text-sm shrink-0">
+                            <span id="user-avatar-initials">AD</span>
+                        </div>
+                        <div class="truncate">
+                            <p id="user-display-name" class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">Admin User</p>
+                            <p id="user-display-email" class="text-xs text-gray-500 dark:text-gray-400 truncate">admin@courierpro.com</p>
+                        </div>
+                    </div>
+                    <button onclick="openAuthModal()" title="Account / Switch User" class="p-2 text-gray-500 hover:text-rosebrand rounded-lg hover:bg-white dark:hover:bg-gray-600">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+
+            <!-- Top Navigation Bar -->
+            <header class="bg-white dark:bg-gray-800 border-b border-rosebrand-100 dark:border-gray-700 h-16 px-4 md:px-8 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <button id="open-sidebar-btn" class="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-rosebrand">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="page-title" class="text-xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
+                </div>
+
+                <div class="flex items-center gap-3 md:gap-4">
+                    <!-- Quick Live Tracker Simulator Trigger -->
+                    <button onclick="triggerSimulatedUpdate()" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-rosebrand-50 text-rosebrand text-xs font-semibold rounded-lg hover:bg-rosebrand-100 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-rosebrand animate-ping"></span>
+                        Simulate Live Dispatch
+                    </button>
+
+                    <!-- Dark Mode Toggle -->
+                    <button id="dark-mode-toggle" class="p-2.5 text-gray-600 dark:text-gray-300 hover:text-rosebrand hover:bg-rosebrand-50 dark:hover:bg-gray-700 rounded-xl transition-all" title="Toggle Dark/Light Mode">
+                        <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                        <i class="fa-solid fa-sun text-lg hidden dark:block text-yellow-400"></i>
+                    </button>
+
+                    <!-- User Profile Dropdown Button -->
+                    <button onclick="openAuthModal()" class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-rosebrand dark:hover:border-rosebrand transition-all">
+                        <div class="w-7 h-7 rounded-full bg-rosebrand/10 text-rosebrand font-bold text-xs flex items-center justify-center">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <span class="text-xs font-medium text-gray-700 dark:text-gray-200 hidden sm:inline">Account</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Content Container -->
+            <main class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 bg-pinkbg/20 dark:bg-gray-900/50">
+
+                <!-- 1. DASHBOARD MODULE -->
+                <section id="module-dashboard" class="space-y-6">
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Bookings</p>
+                                <h3 id="kpi-total-bookings" class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">0</h3>
+                                <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-up"></i> +12.5% this month
+                                </p>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-rosebrand-50 dark:bg-rosebrand-900/30 text-rosebrand flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">In-Transit</p>
+                                <h3 id="kpi-intransit-bookings" class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">0</h3>
+                                <p class="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-truck"></i> Active shipments
+                                </p>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-truck-ramp-box"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Delivered</p>
+                                <h3 id="kpi-delivered-bookings" class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">0</h3>
+                                <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check"></i> Completed
+                                </p>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Revenue</p>
+                                <h3 id="kpi-total-revenue" class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">₹0.00</h3>
+                                <p class="text-xs text-rosebrand dark:text-rosebrand-light mt-2 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-wallet"></i> Updated live
+                                </p>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-rosebrand-50 dark:bg-rosebrand-900/30 text-rosebrand flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-indian-rupee-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Overview Cards & Quick Actions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Revenue / Volume Graphic Representation -->
+                        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-line text-rosebrand"></i> Shipment Volume Analytics
+                                </h4>
+                                <span class="text-xs font-semibold px-2.5 py-1 bg-rosebrand-50 dark:bg-rosebrand-900/30 text-rosebrand rounded-full">Weekly Snapshot</span>
+                            </div>
+                            <!-- CSS Bar Chart Visualization -->
+                            <div class="h-56 flex items-end justify-between gap-2 pt-6 pb-2 px-2 border-b border-gray-100 dark:border-gray-700">
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 45%;"></div>
+                                    <span class="text-xs text-gray-400">Mon</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 65%;"></div>
+                                    <span class="text-xs text-gray-400">Tue</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 80%;"></div>
+                                    <span class="text-xs text-gray-400">Wed</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 55%;"></div>
+                                    <span class="text-xs text-gray-400">Thu</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand transition-all rounded-t-lg" style="height: 95%;"></div>
+                                    <span class="text-xs font-bold text-rosebrand">Fri</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 40%;"></div>
+                                    <span class="text-xs text-gray-400">Sat</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                                    <div class="w-full bg-rosebrand-100 dark:bg-rosebrand-900/40 hover:bg-rosebrand transition-all rounded-t-lg" style="height: 25%;"></div>
+                                    <span class="text-xs text-gray-400">Sun</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Panel -->
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-bolt text-rosebrand"></i> Quick Actions
+                                </h4>
+                                <div class="space-y-3">
+                                    <button onclick="openBookingModal()" class="w-full py-3 px-4 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center justify-between">
+                                        <span><i class="fa-solid fa-plus mr-2"></i> Create New Booking</span>
+                                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                                    </button>
+                                    <button onclick="switchTab('track')" class="w-full py-3 px-4 bg-rosebrand-50 dark:bg-gray-700 hover:bg-rosebrand-100 text-rosebrand dark:text-rosebrand-light font-medium rounded-xl transition-all flex items-center justify-between">
+                                        <span><i class="fa-solid fa-magnifying-glass mr-2"></i> Fast Parcel Tracking</span>
+                                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                                    </button>
+                                    <button onclick="openPersonnelModal()" class="w-full py-3 px-4 bg-rosebrand-50 dark:bg-gray-700 hover:bg-rosebrand-100 text-rosebrand dark:text-rosebrand-light font-medium rounded-xl transition-all flex items-center justify-between">
+                                        <span><i class="fa-solid fa-user-plus mr-2"></i> Add Delivery Driver</span>
+                                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-6 p-4 rounded-xl bg-pinkbg dark:bg-gray-700/50 border border-rosebrand-100 dark:border-gray-600 text-xs">
+                                <p class="font-semibold text-rosebrand dark:text-rosebrand-light flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-info"></i> System Tip
+                                </p>
+                                <p class="text-gray-600 dark:text-gray-300 mt-1">All modified state is automatically synced to browser LocalStorage.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Bookings Table Preview -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                            <h4 class="font-bold text-gray-800 dark:text-white">Recent Shipments</h4>
+                            <button onclick="switchTab('bookings')" class="text-xs font-bold text-rosebrand hover:underline">View All Bookings &rarr;</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                                <thead class="bg-rosebrand-50/50 dark:bg-gray-700/50 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th class="p-4">Tracking #</th>
+                                        <th class="p-4">Sender</th>
+                                        <th class="p-4">Receiver</th>
+                                        <th class="p-4">Weight</th>
+                                        <th class="p-4">Amount</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-recent-bookings" class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. BOOKING MANAGEMENT (CRUD) MODULE -->
+                <section id="module-bookings" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Booking Management</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Create, edit, track and manage courier bookings.</p>
+                        </div>
+                        <button onclick="openBookingModal()" class="px-5 py-2.5 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> New Booking
+                        </button>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400"></i>
+                            <input type="text" id="booking-search" oninput="renderBookingsTable()" placeholder="Search by tracking #, sender or receiver..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-rosebrand dark:text-white text-sm">
+                        </div>
+                        <select id="booking-filter-status" onchange="renderBookingsTable()" class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:outline-none focus:border-rosebrand dark:text-white">
+                            <option value="ALL">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-transit">In Transit</option>
+                            <option value="out-for-delivery">Out for Delivery</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Main Bookings Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                                <thead class="bg-rosebrand-50/50 dark:bg-gray-700/50 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th class="p-4">Tracking #</th>
+                                        <th class="p-4">Sender</th>
+                                        <th class="p-4">Receiver</th>
+                                        <th class="p-4">Weight</th>
+                                        <th class="p-4">Date</th>
+                                        <th class="p-4">Amount</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bookings-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. SHIPMENT TRACKING MODULE -->
+                <section id="module-track" class="space-y-6 hidden">
+                    <div class="max-w-3xl mx-auto space-y-6">
+                        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm text-center">
+                            <div class="w-16 h-16 bg-rosebrand-50 dark:bg-rosebrand-900/30 text-rosebrand rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                <i class="fa-solid fa-location-crosshairs"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Track Your Shipment</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-6">Enter tracking number (e.g. CR-2026-001 or CR-2026-002) for real-time progress</p>
+
+                            <div class="flex gap-2 max-w-lg mx-auto">
+                                <input type="text" id="track-input-number" placeholder="CR-2026-001" class="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:border-rosebrand dark:text-white font-mono uppercase text-sm">
+                                <button onclick="trackParcel()" class="px-6 py-3 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all">
+                                    Track
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Result Display Card -->
+                        <div id="tracking-result-card" class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm hidden space-y-6">
+                            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+                                <div>
+                                    <span class="text-xs text-gray-400 font-mono uppercase">Tracking ID</span>
+                                    <h4 id="track-res-id" class="text-2xl font-black text-rosebrand font-mono">CR-2026-001</h4>
+                                </div>
+                                <div id="track-res-badge">
+                                    <!-- Badge rendered dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Details Grid -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-pinkbg/30 dark:bg-gray-700/30 p-4 rounded-xl text-xs">
+                                <div>
+                                    <p class="text-gray-400">Sender</p>
+                                    <p id="track-res-sender" class="font-semibold text-gray-800 dark:text-gray-200">John Smith</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Receiver</p>
+                                    <p id="track-res-receiver" class="font-semibold text-gray-800 dark:text-gray-200">Sarah Johnson</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Parcel Weight</p>
+                                    <p id="track-res-weight" class="font-semibold text-gray-800 dark:text-gray-200">2.5 kg</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Booking Date</p>
+                                    <p id="track-res-date" class="font-semibold text-gray-800 dark:text-gray-200">2026-06-25</p>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Progress Timeline -->
+                            <div class="py-6">
+                                <h5 class="text-sm font-bold text-gray-800 dark:text-white mb-6">Shipment Timeline</h5>
+                                <div class="relative flex items-center justify-between max-w-xl mx-auto px-4">
+                                    <div class="absolute left-8 right-8 top-5 h-1 bg-gray-200 dark:bg-gray-700 -z-0"></div>
+                                    <div id="timeline-bar-progress" class="absolute left-8 top-5 h-1 bg-rosebrand transition-all duration-500 -z-0" style="width: 0%;"></div>
+
+                                    <!-- Step 1: Pending -->
+                                    <div class="flex flex-col items-center gap-2 z-10">
+                                        <div id="step-node-pending" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-400">
+                                            1
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Pending</span>
+                                    </div>
+
+                                    <!-- Step 2: In Transit -->
+                                    <div class="flex flex-col items-center gap-2 z-10">
+                                        <div id="step-node-in-transit" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-400">
+                                            2
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">In-Transit</span>
+                                    </div>
+
+                                    <!-- Step 3: Out for Delivery -->
+                                    <div class="flex flex-col items-center gap-2 z-10">
+                                        <div id="step-node-out-for-delivery" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-400">
+                                            3
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Out for Delivery</span>
+                                    </div>
+
+                                    <!-- Step 4: Delivered -->
+                                    <div class="flex flex-col items-center gap-2 z-10">
+                                        <div id="step-node-delivered" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-400">
+                                            4
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Delivered</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Digital Delivery Proof Section -->
+                            <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p class="text-xs text-gray-500">Need to record proof of delivery signature?</p>
+                                <button onclick="openSignatureModal()" class="px-4 py-2 text-xs font-semibold bg-rosebrand-50 text-rosebrand rounded-lg hover:bg-rosebrand-100 transition-colors">
+                                    <i class="fa-solid fa-signature mr-1"></i> Capture Delivery Signature
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. DELIVERY PERSONNEL MODULE -->
+                <section id="module-personnel" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Delivery Personnel</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Manage delivery couriers, active vehicle assignments and status.</p>
+                        </div>
+                        <button onclick="openPersonnelModal()" class="px-5 py-2.5 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i> Add Delivery Staff
+                        </button>
+                    </div>
+
+                    <div id="personnel-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Personnel Cards rendered dynamically -->
+                    </div>
+                </section>
+
+                <!-- 5. ROUTE MANAGEMENT MODULE -->
+                <section id="module-routes" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Route Management</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Plan and optimize regional courier distribution routes.</p>
+                        </div>
+                        <button onclick="openRouteModal()" class="px-5 py-2.5 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-route"></i> Create New Route
+                        </button>
+                    </div>
+
+                    <div id="routes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Routes Cards rendered dynamically -->
+                    </div>
+                </section>
+
+                <!-- 6. BILLING & INVOICING MODULE -->
+                <section id="module-billing" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Billing & Invoicing</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Generate invoices, review payment statuses, and trigger checkout simulations.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                                <thead class="bg-rosebrand-50/50 dark:bg-gray-700/50 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th class="p-4">Invoice #</th>
+                                        <th class="p-4">Booking Ref</th>
+                                        <th class="p-4">Customer</th>
+                                        <th class="p-4">Date</th>
+                                        <th class="p-4">Amount</th>
+                                        <th class="p-4">Payment Status</th>
+                                        <th class="p-4 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoices-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. CUSTOMER MANAGEMENT MODULE -->
+                <section id="module-customers" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Customer Management</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Manage customer profiles, delivery addresses and preferences.</p>
+                        </div>
+                        <button onclick="openCustomerModal()" class="px-5 py-2.5 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i> Add Customer
+                        </button>
+                    </div>
+
+                    <div id="customers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Customer Cards rendered dynamically -->
+                    </div>
+                </section>
+
+                <!-- 8. REVIEWS & RATINGS MODULE (BONUS) -->
+                <section id="module-reviews" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Customer Reviews & Ratings</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Feedback submitted by clients on delivery service quality.</p>
+                        </div>
+                        <button onclick="openReviewModal()" class="px-5 py-2.5 bg-rosebrand hover:bg-rosebrand-dark text-white font-medium rounded-xl shadow-md shadow-rosebrand/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-pen"></i> Submit Feedback
+                        </button>
+                    </div>
+
+                    <div id="reviews-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Reviews rendered dynamically -->
+                    </div>
+                </section>
+
+                <!-- 9. REPORTS ANALYTICS MODULE -->
+                <section id="module-reports" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Reports & Performance Analytics</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Generate system summaries and export data files.</p>
+                        </div>
+                        <button onclick="exportBookingsToCSV()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-file-csv text-lg"></i> Export Bookings CSV
+                        </button>
+                    </div>
+
+                    <!-- Report Metrics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm">
+                            <h5 class="text-xs font-semibold uppercase text-gray-400">Completion Rate</h5>
+                            <h3 id="rep-completion-rate" class="text-3xl font-black text-rosebrand mt-2">100%</h3>
+                            <p class="text-xs text-gray-500 mt-2">Delivered vs Total Bookings</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm">
+                            <h5 class="text-xs font-semibold uppercase text-gray-400">Avg. Parcel Weight</h5>
+                            <h3 id="rep-avg-weight" class="text-3xl font-black text-gray-800 dark:text-white mt-2">1.8 kg</h3>
+                            <p class="text-xs text-gray-500 mt-2">Average weight across shipments</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm">
+                            <h5 class="text-xs font-semibold uppercase text-gray-400">Average Order Value</h5>
+                            <h3 id="rep-avg-value" class="text-3xl font-black text-emerald-600 mt-2">₹200.00</h3>
+                            <p class="text-xs text-gray-500 mt-2">Revenue per courier booking</p>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- 1. BOOKING MODAL (CREATE / EDIT) -->
+    <div id="modal-booking" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 id="modal-booking-title" class="font-bold text-gray-800 dark:text-white">Create New Booking</h3>
+                <button onclick="closeModal('modal-booking')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-booking" onsubmit="handleBookingSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="booking-edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Tracking Number</label>
+                        <input type="text" id="booking-form-tracking" readonly class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 font-mono text-sm text-gray-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Date</label>
+                        <input type="date" id="booking-form-date" required class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Sender Name</label>
+                        <input type="text" id="booking-form-sender" required placeholder="John Smith" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Receiver Name</label>
+                        <input type="text" id="booking-form-receiver" required placeholder="Sarah Johnson" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Weight (kg)</label>
+                        <input type="text" id="booking-form-weight" required placeholder="2.5 kg" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Amount (₹)</label>
+                        <input type="number" step="0.01" id="booking-form-amount" required placeholder="250.00" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Status</label>
+                        <select id="booking-form-status" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                            <option value="pending">Pending</option>
+                            <option value="in-transit">In Transit</option>
+                            <option value="out-for-delivery">Out for Delivery</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-booking')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md shadow-rosebrand/20">Save Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. PERSONNEL MODAL -->
+    <div id="modal-personnel" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 id="modal-personnel-title" class="font-bold text-gray-800 dark:text-white">Add Delivery Staff</h3>
+                <button onclick="closeModal('modal-personnel')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-personnel" onsubmit="handlePersonnelSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="personnel-edit-id">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Staff Name</label>
+                    <input type="text" id="personnel-form-name" required placeholder="Rahul Sharma" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Contact Phone</label>
+                    <input type="text" id="personnel-form-contact" required placeholder="+91 9876543210" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Vehicle Registration Number</label>
+                    <input type="text" id="personnel-form-vehicle" required placeholder="KA-01-AB-1234" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Assigned Route</label>
+                        <input type="text" id="personnel-form-route" placeholder="Route A" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Status</label>
+                        <select id="personnel-form-status" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                            <option value="Active">Active</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-personnel')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md shadow-rosebrand/20">Save Staff</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. CUSTOMER MODAL -->
+    <div id="modal-customer" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 id="modal-customer-title" class="font-bold text-gray-800 dark:text-white">Add Customer Profile</h3>
+                <button onclick="closeModal('modal-customer')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-customer" onsubmit="handleCustomerSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="customer-edit-id">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Full Name</label>
+                    <input type="text" id="customer-form-name" required placeholder="John Smith" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email Address</label>
+                        <input type="email" id="customer-form-email" required placeholder="john@example.com" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Phone Number</label>
+                        <input type="text" id="customer-form-phone" required placeholder="+91 9123456789" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Delivery Address</label>
+                    <textarea id="customer-form-address" required rows="2" placeholder="Street, City, Pin Code" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Preferences</label>
+                    <input type="text" id="customer-form-preferences" placeholder="e.g. Leave at door, Morning delivery" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-customer')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md shadow-rosebrand/20">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. ROUTE MODAL -->
+    <div id="modal-route" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 dark:text-white">Add Delivery Route</h3>
+                <button onclick="closeModal('modal-route')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-route" onsubmit="handleRouteSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Route Name</label>
+                    <input type="text" id="route-form-name" required placeholder="Route C - West Suburbs" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Stops (Comma Separated)</label>
+                    <input type="text" id="route-form-stops" required placeholder="Hub A, Stop 1, Stop 2, Hub B" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Assigned Personnel</label>
+                    <input type="text" id="route-form-personnel" placeholder="Rahul Sharma" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-route')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md shadow-rosebrand/20">Save Route</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. INVOICE VIEW / SIMULATION CHECKOUT MODAL -->
+    <div id="modal-invoice" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-rosebrand"></i> Invoice Details
+                </h3>
+                <button onclick="closeModal('modal-invoice')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                    <div>
+                        <span class="text-xs text-gray-400">Invoice Ref</span>
+                        <h4 id="inv-modal-id" class="text-lg font-black text-rosebrand font-mono">INV-101</h4>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-400">Booking Ref</span>
+                        <p id="inv-modal-booking" class="text-sm font-semibold text-gray-800 dark:text-gray-200">CR-2026-001</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Amount Due:</span>
+                    <span id="inv-modal-amount" class="font-extrabold text-gray-900 dark:text-white">₹250.00</span>
+                </div>
+
+                <!-- Simulated Payment Gateway -->
+                <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                    <p class="text-xs font-bold text-gray-700 dark:text-gray-300">Payment Gateway Simulation</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="simulatePayment('Credit Card')" class="py-2 px-3 bg-white dark:bg-gray-800 border hover:border-rosebrand rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-credit-card text-rosebrand"></i> Card
+                        </button>
+                        <button onclick="simulatePayment('UPI')" class="py-2 px-3 bg-white dark:bg-gray-800 border hover:border-rosebrand rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-mobile-screen-button text-rosebrand"></i> UPI Instant
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button onclick="closeModal('modal-invoice')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 rounded-xl">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. DIGITAL SIGNATURE / PROOF MODAL -->
+    <div id="modal-signature" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 dark:text-white">Proof of Delivery Signature</h3>
+                <button onclick="closeModal('modal-signature')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-gray-500">Sign below using your mouse or touch screen:</p>
+                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-900 overflow-hidden">
+                    <canvas id="sig-canvas" class="w-full h-40 touch-none cursor-crosshair"></canvas>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button onclick="clearSignatureCanvas()" class="text-xs font-medium text-rosebrand hover:underline">Clear Canvas</button>
+                    <button onclick="saveSignatureProof()" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md">Confirm Signature</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. REVIEWS MODAL -->
+    <div id="modal-review" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 dark:text-white">Submit Customer Review</h3>
+                <button onclick="closeModal('modal-review')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-review" onsubmit="handleReviewSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Customer Name</label>
+                    <input type="text" id="review-form-name" required placeholder="Sarah Johnson" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Rating (1-5 Stars)</label>
+                    <select id="review-form-rating" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                        <option value="5">⭐⭐⭐⭐⭐ (5 Stars - Excellent)</option>
+                        <option value="4">⭐⭐⭐⭐ (4 Stars - Very Good)</option>
+                        <option value="3">⭐⭐⭐ (3 Stars - Average)</option>
+                        <option value="2">⭐⭐ (2 Stars - Poor)</option>
+                        <option value="1">⭐ (1 Star - Bad)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Comments</label>
+                    <textarea id="review-form-comment" required rows="3" placeholder="Fast delivery and safe parcel handling..." class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white"></textarea>
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-review')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md">Post Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 8. AUTH SIMULATION MODAL -->
+    <div id="modal-auth" class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-xl border border-rosebrand-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 bg-pinkbg/50 dark:bg-gray-700/50 border-b border-rosebrand-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800 dark:text-white">User Authentication</h3>
+                <button onclick="closeModal('modal-auth')" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-auth" onsubmit="handleAuthSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">User Profile Name</label>
+                    <input type="text" id="auth-form-name" required placeholder="Admin Manager" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Email Address</label>
+                    <input type="email" id="auth-form-email" required placeholder="admin@courierpro.com" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 text-sm dark:text-white">
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-auth')" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-rosebrand text-white hover:bg-rosebrand-dark rounded-xl shadow-md">Update User Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- APPLICATION LOGIC IN JAVASCRIPT -->
+    <script>
+        // DATA STATE & LOCAL STORAGE PERSISTENCE
+        const defaultBookings = [
+            { id: 1, tracking_number: "CR-2026-001", sender: "John Smith", receiver: "Sarah Johnson", weight: "2.5 kg", status: "in-transit", amount: 250.00, date: "2026-06-25" },
+            { id: 2, tracking_number: "CR-2026-002", sender: "Amazon", receiver: "Rajesh Kumar", weight: "1.2 kg", status: "delivered", amount: 150.00, date: "2026-06-24" }
+        ];
+
+        const defaultPersonnel = [
+            { id: 1, name: "Rahul Sharma", contact: "+91 9876543210", vehicle: "KA-01-AB-1234", assigned_routes: "Route A", status: "Active" },
+            { id: 2, name: "Vikram Singh", contact: "+91 9811223344", vehicle: "KA-02-CD-5678", assigned_routes: "Route B", status: "Active" }
+        ];
+
+        const defaultRoutes = [
+            { id: 1, name: "Route A - North Metro", stops: "Hub 1, North Stop 1, North Stop 2, Hub 2", assigned_personnel: "Rahul Sharma", status: "Active" },
+            { id: 2, name: "Route B - South District", stops: "Central Hub, South Express, Depot B", assigned_personnel: "Vikram Singh", status: "Active" }
+        ];
+
+        const defaultInvoices = [
+            { id: 101, booking_id: "CR-2026-001", amount: 250.00, status: "Paid", date: "2026-06-25", customer: "John Smith" },
+            { id: 102, booking_id: "CR-2026-002", amount: 150.00, status: "Paid", date: "2026-06-24", customer: "Amazon" }
+        ];
+
+        const defaultCustomers = [
+            { id: 1, name: "John Smith", email: "john@example.com", phone: "+91 9123456789", address: "123 Green Ave, Bangalore", preferences: "Standard Delivery" },
+            { id: 2, name: "Sarah Johnson", email: "sarah@example.com", phone: "+91 9988776655", address: "456 Tech Park, Mysore", preferences: "Morning Hours" }
+        ];
+
+        const defaultReviews = [
+            { id: 1, name: "Sarah Johnson", rating: 5, comment: "Super fast delivery for CR-2026-001! Arrived ahead of schedule." },
+            { id: 2, name: "Rajesh Kumar", rating: 4, comment: "Good parcel handling and polite courier agent." }
+        ];
+
+        let state = {
+            bookings: JSON.parse(localStorage.getItem('cp_bookings')) || defaultBookings,
+            personnel: JSON.parse(localStorage.getItem('cp_personnel')) || defaultPersonnel,
+            routes: JSON.parse(localStorage.getItem('cp_routes')) || defaultRoutes,
+            invoices: JSON.parse(localStorage.getItem('cp_invoices')) || defaultInvoices,
+            customers: JSON.parse(localStorage.getItem('cp_customers')) || defaultCustomers,
+            reviews: JSON.parse(localStorage.getItem('cp_reviews')) || defaultReviews,
+            user: JSON.parse(localStorage.getItem('cp_user')) || { name: "Admin Manager", email: "admin@courierpro.com" },
+            activeInvoiceId: null
+        };
+
+        function saveState() {
+            localStorage.setItem('cp_bookings', JSON.stringify(state.bookings));
+            localStorage.setItem('cp_personnel', JSON.stringify(state.personnel));
+            localStorage.setItem('cp_routes', JSON.stringify(state.routes));
+            localStorage.setItem('cp_invoices', JSON.stringify(state.invoices));
+            localStorage.setItem('cp_customers', JSON.stringify(state.customers));
+            localStorage.setItem('cp_reviews', JSON.stringify(state.reviews));
+            localStorage.setItem('cp_user', JSON.stringify(state.user));
+            updateDashboard();
+        }
+
+        // INITIALIZATION ON LOAD
+        window.onload = function() {
+            initDarkMode();
+            updateUserProfileUI();
+            updateDashboard();
+            renderBookingsTable();
+            renderPersonnel();
+            renderRoutes();
+            renderInvoices();
+            renderCustomers();
+            renderReviews();
+            renderReports();
+
+            // Set default view tab
+            switchTab('dashboard');
+
+            // Setup Sidebar Toggle for Mobile
+            document.getElementById('open-sidebar-btn').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.remove('-translate-x-full');
+            });
+            document.getElementById('close-sidebar-btn').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            });
+
+            // Dark mode listener
+            document.getElementById('dark-mode-toggle').addEventListener('click', toggleDarkMode);
+
+            // Setup signature canvas
+            initSignatureCanvas();
+        };
+
+        // NAVIGATION TAB SWITCHER
+        function switchTab(tabId) {
+            const modules = ['dashboard', 'bookings', 'track', 'personnel', 'routes', 'billing', 'customers', 'reviews', 'reports'];
+            
+            modules.forEach(m => {
+                const el = document.getElementById(`module-${m}`);
+                const btn = document.getElementById(`nav-${m}`);
+                if (el) el.classList.add('hidden');
+                if (btn) {
+                    btn.classList.remove('bg-rosebrand-50', 'text-rosebrand', 'dark:bg-gray-700');
+                }
+            });
+
+            const activeModule = document.getElementById(`module-${tabId}`);
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            
+            if (activeModule) activeModule.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.add('bg-rosebrand-50', 'text-rosebrand', 'dark:bg-gray-700');
+            }
+
+            // Update Header Title
+            const titles = {
+                dashboard: "Dashboard Overview",
+                bookings: "Booking Management",
+                track: "Shipment Tracking",
+                personnel: "Delivery Personnel",
+                routes: "Route Management",
+                billing: "Billing & Invoices",
+                customers: "Customer Management",
+                reviews: "Customer Reviews & Ratings",
+                reports: "Reports & Performance Analytics"
+            };
+            document.getElementById('page-title').textContent = titles[tabId] || "CourierPro";
+
+            // Mobile sidebar close
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            }
+        }
+
+        // DARK MODE TOGGLE
+        function initDarkMode() {
+            if (localStorage.getItem('cp_theme') === 'dark' || (!('cp_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('cp_theme', 'light');
+                showToast("Light mode enabled", "info");
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('cp_theme', 'dark');
+                showToast("Dark mode enabled", "info");
+            }
+        }
+
+        // TOAST NOTIFICATIONS
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl shadow-lg border flex items-center gap-3 text-sm font-medium transition-all duration-300 transform translate-y-2 pointer-events-auto bg-white dark:bg-gray-800 dark:text-white ${
+                type === 'success' ? 'border-emerald-500 text-emerald-800' : 'border-rosebrand text-rosebrand'
+            }`;
+            
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-500' : 'fa-bell text-rosebrand';
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2'), 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // BADGE GENERATOR
+        function getStatusBadgeHtml(status) {
+            const s = status.toLowerCase();
+            if (s === 'pending') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200">📋 Pending</span>`;
+            if (s === 'in-transit') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200">🔄 In Transit</span>`;
+            if (s === 'out-for-delivery') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200">📍 Out for Delivery</span>`;
+            if (s === 'delivered') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200">✅ Delivered</span>`;
+            if (s === 'cancelled') return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200">❌ Cancelled</span>`;
+            return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">${status}</span>`;
+        }
+
+        // 1. DASHBOARD LOGIC
+        function updateDashboard() {
+            const totalBookings = state.bookings.length;
+            const inTransit = state.bookings.filter(b => b.status === 'in-transit' || b.status === 'out-for-delivery').length;
+            const delivered = state.bookings.filter(b => b.status === 'delivered').length;
+            const revenue = state.bookings.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+
+            document.getElementById('kpi-total-bookings').textContent = totalBookings;
+            document.getElementById('kpi-intransit-bookings').textContent = inTransit;
+            document.getElementById('kpi-delivered-bookings').textContent = delivered;
+            document.getElementById('kpi-total-revenue').textContent = `₹${revenue.toFixed(2)}`;
+
+            // Render Recent Table
+            const recentContainer = document.getElementById('dashboard-recent-bookings');
+            const recent = [...state.bookings].reverse().slice(0, 5);
+
+            if (recent.length === 0) {
+                recentContainer.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400">No bookings available</td></tr>`;
+                return;
+            }
+
+            recentContainer.innerHTML = recent.map(b => `
+                <tr class="hover:bg-rosebrand-50/20 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="p-4 font-mono font-bold text-rosebrand">${b.tracking_number}</td>
+                    <td class="p-4">${b.sender}</td>
+                    <td class="p-4">${b.receiver}</td>
+                    <td class="p-4">${b.weight}</td>
+                    <td class="p-4 font-semibold">₹${parseFloat(b.amount).toFixed(2)}</td>
+                    <td class="p-4">${getStatusBadgeHtml(b.status)}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="quickTrack('${b.tracking_number}')" class="text-xs px-2.5 py-1 bg-rosebrand-50 text-rosebrand rounded-lg font-medium hover:bg-rosebrand-100">Track</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function quickTrack(trackingNum) {
+            switchTab('track');
+            document.getElementById('track-input-number').value = trackingNum;
+            trackParcel();
+        }
+
+        // 2. BOOKING CRUD
+        function renderBookingsTable() {
+            const searchTerm = document.getElementById('booking-search').value.toLowerCase();
+            const filterStatus = document.getElementById('booking-filter-status').value;
+
+            const tbody = document.getElementById('bookings-table-body');
+            let filtered = state.bookings.filter(b => {
+                const matchSearch = b.tracking_number.toLowerCase().includes(searchTerm) ||
+                                    b.sender.toLowerCase().includes(searchTerm) ||
+                                    b.receiver.toLowerCase().includes(searchTerm);
+                const matchStatus = filterStatus === 'ALL' || b.status === filterStatus;
+                return matchSearch && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-400">No matching bookings found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(b => `
+                <tr class="hover:bg-rosebrand-50/20 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="p-4 font-mono font-bold text-rosebrand">${b.tracking_number}</td>
+                    <td class="p-4 font-medium">${b.sender}</td>
+                    <td class="p-4 font-medium">${b.receiver}</td>
+                    <td class="p-4">${b.weight}</td>
+                    <td class="p-4 text-xs text-gray-400">${b.date}</td>
+                    <td class="p-4 font-bold text-gray-800 dark:text-gray-100">₹${parseFloat(b.amount).toFixed(2)}</td>
+                    <td class="p-4">${getStatusBadgeHtml(b.status)}</td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick="editBooking(${b.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteBooking(${b.id})" class="p-1.5 text-rosebrand hover:bg-rosebrand-50 rounded-lg" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openBookingModal(editId = null) {
+            document.getElementById('form-booking').reset();
+            if (editId) {
+                const b = state.bookings.find(item => item.id === editId);
+                if (b) {
+                    document.getElementById('booking-edit-id').value = b.id;
+                    document.getElementById('booking-form-tracking').value = b.tracking_number;
+                    document.getElementById('booking-form-date').value = b.date;
+                    document.getElementById('booking-form-sender').value = b.sender;
+                    document.getElementById('booking-form-receiver').value = b.receiver;
+                    document.getElementById('booking-form-weight').value = b.weight;
+                    document.getElementById('booking-form-amount').value = b.amount;
+                    document.getElementById('booking-form-status').value = b.status;
+                    document.getElementById('modal-booking-title').textContent = "Edit Booking Details";
+                }
+            } else {
+                document.getElementById('booking-edit-id').value = '';
+                document.getElementById('booking-form-tracking').value = `CR-2026-00${state.bookings.length + 1}`;
+                document.getElementById('booking-form-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('modal-booking-title').textContent = "Create New Booking";
+            }
+            document.getElementById('modal-booking').classList.remove('hidden');
+        }
+
+        function handleBookingSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('booking-edit-id').value;
+            const tracking = document.getElementById('booking-form-tracking').value;
+            const date = document.getElementById('booking-form-date').value;
+            const sender = document.getElementById('booking-form-sender').value;
+            const receiver = document.getElementById('booking-form-receiver').value;
+            const weight = document.getElementById('booking-form-weight').value;
+            const amount = parseFloat(document.getElementById('booking-form-amount').value);
+            const status = document.getElementById('booking-form-status').value;
+
+            if (editId) {
+                const index = state.bookings.findIndex(b => b.id == editId);
+                if (index !== -1) {
+                    state.bookings[index] = { ...state.bookings[index], sender, receiver, weight, amount, status, date };
+                    showToast("Booking updated successfully!");
+                }
+            } else {
+                const newBooking = {
+                    id: Date.now(),
+                    tracking_number: tracking,
+                    sender,
+                    receiver,
+                    weight,
+                    status,
+                    amount,
+                    date
+                };
+                state.bookings.push(newBooking);
+
+                // Auto-generate linked invoice
+                state.invoices.push({
+                    id: 100 + state.invoices.length + 1,
+                    booking_id: tracking,
+                    amount: amount,
+                    status: "Unpaid",
+                    date: date,
+                    customer: sender
+                });
+
+                showToast(`New Booking ${tracking} created!`);
+            }
+
+            saveState();
+            renderBookingsTable();
+            renderInvoices();
+            closeModal('modal-booking');
+        }
+
+        function editBooking(id) {
+            openBookingModal(id);
+        }
+
+        function deleteBooking(id) {
+            if (confirm("Are you sure you want to delete this booking record?")) {
+                state.bookings = state.bookings.filter(b => b.id !== id);
+                saveState();
+                renderBookingsTable();
+                showToast("Booking deleted", "info");
+            }
+        }
+
+        // 3. TRACKING LOGIC
+        function trackParcel() {
+            const query = document.getElementById('track-input-number').value.trim().toUpperCase();
+            const card = document.getElementById('tracking-result-card');
+            
+            const booking = state.bookings.find(b => b.tracking_number.toUpperCase() === query);
+
+            if (!booking) {
+                showToast("No shipment found with this tracking number!", "error");
+                card.classList.add('hidden');
+                return;
+            }
+
+            card.classList.remove('hidden');
+            document.getElementById('track-res-id').textContent = booking.tracking_number;
+            document.getElementById('track-res-sender').textContent = booking.sender;
+            document.getElementById('track-res-receiver').textContent = booking.receiver;
+            document.getElementById('track-res-weight').textContent = booking.weight;
+            document.getElementById('track-res-date').textContent = booking.date;
+            document.getElementById('track-res-badge').innerHTML = getStatusBadgeHtml(booking.status);
+
+            // Update Progress Bar & Nodes
+            const stages = ['pending', 'in-transit', 'out-for-delivery', 'delivered'];
+            const currentIdx = stages.indexOf(booking.status.toLowerCase());
+
+            const progressPercent = currentIdx <= 0 ? 0 : (currentIdx / (stages.length - 1)) * 100;
+            document.getElementById('timeline-bar-progress').style.width = `${progressPercent}%`;
+
+            stages.forEach((st, idx) => {
+                const node = document.getElementById(`step-node-${st}`);
+                if (node) {
+                    if (idx <= currentIdx) {
+                        node.className = "w-10 h-10 rounded-full bg-rosebrand text-white flex items-center justify-center text-sm font-bold shadow-md shadow-rosebrand/30 transition-all";
+                        node.innerHTML = `<i class="fa-solid fa-check"></i>`;
+                    } else {
+                        node.className = "w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-400";
+                        node.innerHTML = idx + 1;
+                    }
+                }
+            });
+        }
+
+        function triggerSimulatedUpdate() {
+            if (state.bookings.length === 0) return;
+            const target = state.bookings[0];
+            const stages = ['pending', 'in-transit', 'out-for-delivery', 'delivered'];
+            let currentIdx = stages.indexOf(target.status.toLowerCase());
+            let nextIdx = (currentIdx + 1) % stages.length;
+            
+            target.status = stages[nextIdx];
+            saveState();
+            renderBookingsTable();
+            showToast(`Simulated Live Dispatch: ${target.tracking_number} is now "${target.status.toUpperCase()}"`);
+
+            if (!document.getElementById('module-track').classList.contains('hidden')) {
+                document.getElementById('track-input-number').value = target.tracking_number;
+                trackParcel();
+            }
+        }
+
+        // 4. PERSONNEL MODULE
+        function renderPersonnel() {
+            const container = document.getElementById('personnel-grid');
+            if (state.personnel.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400">No delivery staff added yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = state.personnel.map(p => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-rosebrand-50 text-rosebrand dark:bg-rosebrand-900/30 flex items-center justify-center font-bold text-xl">
+                                <i class="fa-solid fa-user-gear"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 dark:text-white">${p.name}</h4>
+                                <span class="text-xs px-2 py-0.5 rounded-full ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'} font-semibold">${p.status}</span>
+                            </div>
+                        </div>
+                        <button onclick="deletePersonnel(${p.id})" class="text-gray-400 hover:text-rosebrand"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+
+                    <div class="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-phone text-rosebrand"></i> ${p.contact}</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-truck text-rosebrand"></i> ${p.vehicle}</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-route text-rosebrand"></i> ${p.assigned_routes}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openPersonnelModal() {
+            document.getElementById('form-personnel').reset();
+            document.getElementById('modal-personnel').classList.remove('hidden');
+        }
+
+        function handlePersonnelSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('personnel-form-name').value;
+            const contact = document.getElementById('personnel-form-contact').value;
+            const vehicle = document.getElementById('personnel-form-vehicle').value;
+            const route = document.getElementById('personnel-form-route').value;
+            const status = document.getElementById('personnel-form-status').value;
+
+            state.personnel.push({
+                id: Date.now(),
+                name, contact, vehicle, assigned_routes: route, status
+            });
+
+            saveState();
+            renderPersonnel();
+            closeModal('modal-personnel');
+            showToast("Delivery driver registered!");
+        }
+
+        function deletePersonnel(id) {
+            state.personnel = state.personnel.filter(p => p.id !== id);
+            saveState();
+            renderPersonnel();
+            showToast("Staff record removed", "info");
+        }
+
+        // 5. ROUTES MODULE
+        function renderRoutes() {
+            const container = document.getElementById('routes-grid');
+            if (state.routes.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400">No active delivery routes configured.</div>`;
+                return;
+            }
+
+            container.innerHTML = state.routes.map(r => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-rosebrand"></i> ${r.name}
+                        </h4>
+                        <span class="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full font-semibold">Active Route</span>
+                    </div>
+                    <div class="p-3 bg-pinkbg/30 dark:bg-gray-700/30 rounded-xl text-xs text-gray-600 dark:text-gray-300">
+                        <p class="font-semibold text-gray-400 mb-1 uppercase">Stops Sequence:</p>
+                        <p>${r.stops}</p>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-gray-500">
+                        <span>Assigned Courier: <strong>${r.assigned_personnel || 'Unassigned'}</strong></span>
+                        <button onclick="deleteRoute(${r.id})" class="text-rosebrand hover:underline font-medium">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openRouteModal() {
+            document.getElementById('form-route').reset();
+            document.getElementById('modal-route').classList.remove('hidden');
+        }
+
+        function handleRouteSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('route-form-name').value;
+            const stops = document.getElementById('route-form-stops').value;
+            const personnel = document.getElementById('route-form-personnel').value;
+
+            state.routes.push({
+                id: Date.now(),
+                name, stops, assigned_personnel: personnel, status: "Active"
+            });
+
+            saveState();
+            renderRoutes();
+            closeModal('modal-route');
+            showToast("Delivery Route added!");
+        }
+
+        function deleteRoute(id) {
+            state.routes = state.routes.filter(r => r.id !== id);
+            saveState();
+            renderRoutes();
+            showToast("Route removed", "info");
+        }
+
+        // 6. BILLING & INVOICING MODULE
+        function renderInvoices() {
+            const tbody = document.getElementById('invoices-table-body');
+            if (state.invoices.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-400">No invoices recorded.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.invoices.map(inv => `
+                <tr class="hover:bg-rosebrand-50/20 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="p-4 font-mono font-bold text-rosebrand">INV-${inv.id}</td>
+                    <td class="p-4 font-mono text-gray-600 dark:text-gray-300">${inv.booking_id}</td>
+                    <td class="p-4">${inv.customer}</td>
+                    <td class="p-4 text-xs text-gray-400">${inv.date}</td>
+                    <td class="p-4 font-bold">₹${parseFloat(inv.amount).toFixed(2)}</td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                        }">${inv.status}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="viewInvoiceModal(${inv.id})" class="px-3 py-1 bg-rosebrand-50 text-rosebrand rounded-lg text-xs font-medium hover:bg-rosebrand-100">
+                            View / Pay
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewInvoiceModal(invId) {
+            const inv = state.invoices.find(i => i.id === invId);
+            if (!inv) return;
+            state.activeInvoiceId = invId;
+
+            document.getElementById('inv-modal-id').textContent = `INV-${inv.id}`;
+            document.getElementById('inv-modal-booking').textContent = inv.booking_id;
+            document.getElementById('inv-modal-amount').textContent = `₹${parseFloat(inv.amount).toFixed(2)}`;
+
+            document.getElementById('modal-invoice').classList.remove('hidden');
+        }
+
+        function simulatePayment(method) {
+            if (!state.activeInvoiceId) return;
+            const inv = state.invoices.find(i => i.id === state.activeInvoiceId);
+            if (inv) {
+                inv.status = "Paid";
+                saveState();
+                renderInvoices();
+                closeModal('modal-invoice');
+                showToast(`Payment of ₹${inv.amount} successful via ${method}!`);
+            }
+        }
+
+        // 7. CUSTOMER MODULE
+        function renderCustomers() {
+            const container = document.getElementById('customers-grid');
+            if (state.customers.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400">No customer profiles added.</div>`;
+                return;
+            }
+
+            container.innerHTML = state.customers.map(c => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-rosebrand-50 text-rosebrand flex items-center justify-center font-bold text-lg">
+                            ${c.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white">${c.name}</h4>
+                            <p class="text-xs text-gray-400">${c.email}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+                        <p><i class="fa-solid fa-phone text-rosebrand mr-1"></i> ${c.phone}</p>
+                        <p><i class="fa-solid fa-location-dot text-rosebrand mr-1"></i> ${c.address}</p>
+                        <p><i class="fa-solid fa-star text-amber-500 mr-1"></i> Pref: ${c.preferences}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCustomerModal() {
+            document.getElementById('form-customer').reset();
+            document.getElementById('modal-customer').classList.remove('hidden');
+        }
+
+        function handleCustomerSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('customer-form-name').value;
+            const email = document.getElementById('customer-form-email').value;
+            const phone = document.getElementById('customer-form-phone').value;
+            const address = document.getElementById('customer-form-address').value;
+            const preferences = document.getElementById('customer-form-preferences').value;
+
+            state.customers.push({ id: Date.now(), name, email, phone, address, preferences });
+            saveState();
+            renderCustomers();
+            closeModal('modal-customer');
+            showToast("Customer Profile Created!");
+        }
+
+        // 8. REVIEWS MODULE
+        function renderReviews() {
+            const container = document.getElementById('reviews-grid');
+            if (state.reviews.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-400">No reviews yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = state.reviews.map(r => `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-rosebrand-100 dark:border-gray-700 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-gray-800 dark:text-white text-sm">${r.name}</h4>
+                        <div class="text-amber-400 text-xs">${"★".repeat(parseInt(r.rating))}</div>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 italic">"${r.comment}"</p>
+                </div>
+            `).join('');
+        }
+
+        function openReviewModal() {
+            document.getElementById('form-review').reset();
+            document.getElementById('modal-review').classList.remove('hidden');
+        }
+
+        function handleReviewSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('review-form-name').value;
+            const rating = document.getElementById('review-form-rating').value;
+            const comment = document.getElementById('review-form-comment').value;
+
+            state.reviews.push({ id: Date.now(), name, rating, comment });
+            saveState();
+            renderReviews();
+            closeModal('modal-review');
+            showToast("Thank you for your feedback!");
+        }
+
+        // 9. REPORTS & CSV EXPORT MODULE
+        function renderReports() {
+            const total = state.bookings.length;
+            const delivered = state.bookings.filter(b => b.status === 'delivered').length;
+            const rate = total > 0 ? ((delivered / total) * 100).toFixed(0) : 100;
+
+            const totalRev = state.bookings.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+            const avgVal = total > 0 ? (totalRev / total).toFixed(2) : '0.00';
+
+            document.getElementById('rep-completion-rate').textContent = `${rate}%`;
+            document.getElementById('rep-avg-value').textContent = `₹${avgVal}`;
+        }
+
+        function exportBookingsToCSV() {
+            if (state.bookings.length === 0) {
+                showToast("No bookings to export!", "error");
+                return;
+            }
+
+            const headers = ["ID", "Tracking Number", "Sender", "Receiver", "Weight", "Status", "Amount", "Date"];
+            const rows = state.bookings.map(b => [
+                b.id,
+                `"${b.tracking_number}"`,
+                `"${b.sender}"`,
+                `"${b.receiver}"`,
+                `"${b.weight}"`,
+                `"${b.status}"`,
+                b.amount,
+                `"${b.date}"`
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `CourierPro_Bookings_Report_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast("Report CSV downloaded successfully!");
+        }
+
+        // SIGNATURE CANVAS LOGIC
+        let isDrawing = false;
+        let sigCanvas, sigCtx;
+
+        function initSignatureCanvas() {
+            sigCanvas = document.getElementById('sig-canvas');
+            if (!sigCanvas) return;
+            sigCtx = sigCanvas.getContext('2d');
+
+            sigCanvas.width = sigCanvas.offsetWidth;
+            sigCanvas.height = sigCanvas.offsetHeight;
+
+            sigCtx.strokeStyle = "#E11D48";
+            sigCtx.lineWidth = 2.5;
+
+            function getPos(e) {
+                const rect = sigCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            sigCanvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                sigCtx.beginPath();
+                sigCtx.moveTo(pos.x, pos.y);
+            });
+
+            sigCanvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                sigCtx.lineTo(pos.x, pos.y);
+                sigCtx.stroke();
+            });
+
+            sigCanvas.addEventListener('mouseup', () => isDrawing = false);
+            sigCanvas.addEventListener('mouseleave', () => isDrawing = false);
+
+            sigCanvas.addEventListener('touchstart', (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                sigCtx.beginPath();
+                sigCtx.moveTo(pos.x, pos.y);
+            });
+            sigCanvas.addEventListener('touchmove', (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                sigCtx.lineTo(pos.x, pos.y);
+                sigCtx.stroke();
+            });
+            sigCanvas.addEventListener('touchend', () => isDrawing = false);
+        }
+
+        function openSignatureModal() {
+            document.getElementById('modal-signature').classList.remove('hidden');
+            setTimeout(() => {
+                sigCanvas.width = sigCanvas.offsetWidth;
+                sigCanvas.height = sigCanvas.offsetHeight;
+                clearSignatureCanvas();
+            }, 100);
+        }
+
+        function clearSignatureCanvas() {
+            if (sigCtx) {
+                sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+                sigCtx.strokeStyle = "#E11D48";
+                sigCtx.lineWidth = 2.5;
+            }
+        }
+
+        function saveSignatureProof() {
+            closeModal('modal-signature');
+            showToast("Delivery Signature Proof Saved!");
+        }
+
+        // AUTH & USER STATE
+        function updateUserProfileUI() {
+            document.getElementById('user-display-name').textContent = state.user.name;
+            document.getElementById('user-display-email').textContent = state.user.email;
+            const initials = state.user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            document.getElementById('user-avatar-initials').textContent = initials || 'US';
+        }
+
+        function openAuthModal() {
+            document.getElementById('auth-form-name').value = state.user.name;
+            document.getElementById('auth-form-email').value = state.user.email;
+            document.getElementById('modal-auth').classList.remove('hidden');
+        }
+
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            state.user.name = document.getElementById('auth-form-name').value;
+            state.user.email = document.getElementById('auth-form-email').value;
+            saveState();
+            updateUserProfileUI();
+            closeModal('modal-auth');
+            showToast("User session updated!");
+        }
+
+        // GENERAL UTILS
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
